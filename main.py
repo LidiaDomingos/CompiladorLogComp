@@ -23,6 +23,7 @@ def simpleCalculator(*args):
             for s in range(1, len(sub_lista)):
                 sub = sub - int(sub_lista[s])
             subt = subt - sub
+        print(soma -subt)
         return (soma - subt)
     else:
         raise Exception("Não é possível fazer essa operação!")
