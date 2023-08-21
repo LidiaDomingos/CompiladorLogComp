@@ -1,6 +1,5 @@
 from sys import *
 
-
 def simpleCalculator(*args):
     soma = 0
     subt = 0
@@ -27,6 +26,5 @@ def simpleCalculator(*args):
         return (soma - subt)
     else:
         raise Exception("Não é possível fazer essa operação!")
-    
 
 simpleCalculator(argv)
