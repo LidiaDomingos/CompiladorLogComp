@@ -1,10 +1,12 @@
 from sys import *
 
+
 class Token:
 
     def __init__(self, type: str, value: int or str):
         self.type = type
         self.value = value
+
 
 class Tokenizer:
 
@@ -27,22 +29,32 @@ class Tokenizer:
                 self.position = self.position + 1
             else:
                 break
-        
+
         if (self.isTheLast):
             self.token_type = "EOF"
             self.next = Token(type=self.token_type,
-                                value="")
+                              value="")
 
         elif (self.source[self.position] == "+"):
             self.token_type = "PLUS"
             self.next = Token(type=self.token_type,
-                                value=self.source[self.position])
+                              value=self.source[self.position])
 
         elif (self.source[self.position] == "-"):
             self.token_type = "MINUS"
             self.next = Token(type=self.token_type,
-                                value=self.source[self.position])
-            
+                              value=self.source[self.position])
+
+        elif (self.source[self.position] == "*"):
+            self.token_type = "TIMES"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
+
+        elif (self.source[self.position] == "/"):
+            self.token_type = "DIVISION"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
+
         elif (self.source[self.position].isdigit()):
             self.token_type = "INT"
             number = ""
@@ -56,44 +68,73 @@ class Tokenizer:
             self.position = self.position - 1
             self.next = Token(type=self.token_type, value=int(number))
         else:
-            raise ValueError("Contains invalid character! The possible ones are: {[0-9], +, - }")
+            raise ValueError(
+                "Contains invalid character! The possible ones are: {[0-9], +, - }")
+
 
 class Parser():
 
-    tokenizer : Tokenizer
+    tokenizer: Tokenizer
+
+    @staticmethod
+    def parseTerm():
+        result = Parser().tokenizer.next.value
+        Parser().tokenizer.selectNext()
+        while (Parser().tokenizer.next.type != "EOF"):
+            if (Parser().tokenizer.next.type == "INT"):
+                raise SyntaxError(
+                    'A grammatical error has occurred! Check that the entry is correct. Example: "1*2"')
+
+            elif (Parser().tokenizer.next.type == "TIMES"):
+                Parser().tokenizer.selectNext()
+                if (Parser().tokenizer.next.type == "INT"):
+                    result = result * Parser().tokenizer.next.value
+                else:
+                    raise SyntaxError(
+                        'Must be a integer after the TIMES signal!')
+
+            elif (Parser().tokenizer.next.type == "DIVISION"):
+                Parser().tokenizer.selectNext()
+
+                if (Parser().tokenizer.next.type == "INT"):
+                    result = result // Parser().tokenizer.next.value
+                else:
+                    raise SyntaxError(
+                        'Must be a integer after the DIVISION signal!')
+            else:
+                return result
+            Parser().tokenizer.selectNext()
+        return result
 
     @staticmethod
     def parseExpression():
-        
         if (Parser().tokenizer.next.type == "INT"):
-            result = Parser().tokenizer.next.value
-            Parser().tokenizer.selectNext()
+            result = Parser().parseTerm()
             while (Parser().tokenizer.next.type != "EOF"):
 
-                if (Parser().tokenizer.next.type == "INT"):
-                    raise SyntaxError('A grammatical error has occurred! Check that the entry is correct. Example: "1+2-3"')
-                
-                elif (Parser().tokenizer.next.type == "PLUS"):
+                if (Parser().tokenizer.next.type == "PLUS"):
                     Parser().tokenizer.selectNext()
                     if (Parser().tokenizer.next.type == "INT"):
-                        result = result + Parser().tokenizer.next.value
+                        resultTerm = Parser().parseTerm()
+                        result = result + resultTerm
                     else:
-                        raise SyntaxError('Must be a integer after the PLUS signal!')
-
+                        raise SyntaxError(
+                            'Must be a integer after the TIMES signal!')
+                    
                 elif (Parser().tokenizer.next.type == "MINUS"):
                     Parser().tokenizer.selectNext()
                     if (Parser().tokenizer.next.type == "INT"):
-                        result = result - Parser().tokenizer.next.value
+                        resultTerm = Parser().parseTerm()
+                        result = result - resultTerm
                     else:
-                        raise SyntaxError('Must be a integer after the MINUS signal!')
-                    
-                Parser().tokenizer.selectNext()
-        else:
-            raise SyntaxError('The first element of the expression must be an integer!')
+                        raise SyntaxError(
+                            'Must be a integer after the MINUS signal!')
 
-        if (Parser().tokenizer.next.type == "EOF"):
             return result
-    
+        else:
+            raise SyntaxError(
+                'The first element of the expression must be an integer!')
+
     @classmethod
     def run(cls, source: str):
         cls.tokenizer = Tokenizer(source)
@@ -105,6 +146,6 @@ class Parser():
 def main():
     Parser().run(argv[1])
 
+
 if __name__ == "__main__":
     main()
-
