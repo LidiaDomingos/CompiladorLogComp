@@ -87,30 +87,18 @@ class Parser():
     @staticmethod
     def parseTerm():
         result = Parser().parseFactor()
-        Parser().tokenizer.selectNext()
         while (Parser().tokenizer.next.type == "TIMES" or Parser().tokenizer.next.type == "DIVISION"):
         
             if (Parser().tokenizer.next.type == "TIMES"):
                 Parser().tokenizer.selectNext()
-                if (Parser().tokenizer.next.type == "INT"):
-                    resultFactor = Parser().parseFactor()
-                    result = result * resultFactor
-                else:
-                    raise SyntaxError(
-                        'Must be a integer after the TIMES signal!')
-
+                resultFactor = Parser().parseFactor()
+                result = result * resultFactor 
+                
             elif (Parser().tokenizer.next.type == "DIVISION"):
                 Parser().tokenizer.selectNext()
-
-                if (Parser().tokenizer.next.type == "INT"):
-                    resultFactor = Parser().parseFactor()
-                    result = result // resultFactor
-                else:
-                    raise SyntaxError(
-                        'Must be a integer after the DIVISION signal!')
-            else:
-                return result
-            Parser().tokenizer.selectNext()
+                resultFactor = Parser().parseFactor()
+                result = result // resultFactor
+        
         return result
 
     @staticmethod
@@ -119,29 +107,23 @@ class Parser():
         while (Parser().tokenizer.next.type == "PLUS" or Parser().tokenizer.next.type == "MINUS"):
             if (Parser().tokenizer.next.type == "PLUS"):
                 Parser().tokenizer.selectNext()
-                if (Parser().tokenizer.next.type == "INT"):
-                    resultTerm = Parser().parseTerm()
-                    result = result + resultTerm
-                else:
-                    raise SyntaxError(
-                        'Must be a integer after the PLUS signal!')
+                resultTerm = Parser().parseTerm()
+                result = result + resultTerm
                 
             elif (Parser().tokenizer.next.type == "MINUS"):
                 Parser().tokenizer.selectNext()
-                if (Parser().tokenizer.next.type == "INT"):
-                    resultTerm = Parser().parseTerm()
-                    result = result - resultTerm
-                else:
-                    raise SyntaxError(
-                        'Must be a integer after the MINUS signal!')
-
+                resultTerm = Parser().parseTerm()
+                result = result - resultTerm
         return result  
 
     @staticmethod
     def parseFactor():
         result = Parser().tokenizer.next.value
+
         if (Parser().tokenizer.next.type == "INT"):
+            Parser().tokenizer.selectNext()
             return result
+        
         elif (Parser().tokenizer.next.type == "PLUS"):
             Parser().tokenizer.selectNext()
             result = Parser().parseFactor()
@@ -155,19 +137,27 @@ class Parser():
         elif (Parser().tokenizer.next.type == "START_PARENTHESES"):
             Parser().tokenizer.selectNext()
             resultExpression = Parser().parseExpression()
-            if (Parser().tokenizer.next.type == "END_PARENTHESES"):
-                return resultExpression
-            else:
-                raise SyntaxError(
-                        'Must have an end parentheses!')
+
+            if (Parser().tokenizer.next.type != "END_PARENTHESES"):
+                raise SyntaxError("It must have an end parentheses!")
+            
+            Parser().tokenizer.selectNext()
+
+            return resultExpression
+        
+        else:
+            raise SyntaxError("Something is wrong!")
 
     @classmethod
     def run(cls, source: str):
         cls.tokenizer = Tokenizer(source)
         cls.tokenizer.selectNext()
         result = cls.parseExpression()
-        print(result)
-        return result
+        if (Parser().tokenizer.next.type == "EOF"):
+            print(result)
+            return result
+        else:
+            raise SyntaxError("Check if everything is correct! Did not arrive in EOF type")
 
 def main():
     Parser().run(argv[1])
