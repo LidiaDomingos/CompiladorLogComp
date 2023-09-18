@@ -57,8 +57,8 @@ class BinOp(Node):
 class UnOp(Node):
 
     def Evaluate(self):
-        result = self.children
-
+        result = self.children[0]
+        
         if (self.variant == "+"):
             return result.Evaluate()
 
