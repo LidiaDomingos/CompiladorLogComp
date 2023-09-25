@@ -139,7 +139,6 @@ class Tokenizer:
 
     def selectNext(self):
         self.position = self.position + 1
-        # print(self.token_type)
         while (True):            
             if (self.position == (len(self.source))):
                 self.position = self.position - 1
@@ -219,7 +218,7 @@ class Tokenizer:
                     break
 
             self.position = self.position - 1
-            if (identifier == "println" or identifier == "Println"):
+            if (identifier == "Println"):
                 self.token_type = "PRINTLN"
                 self.next = Token(type=self.token_type, value="Println")
             else:
@@ -228,7 +227,7 @@ class Tokenizer:
         
         else:
             raise ValueError(
-                "Contains invalid character! The possible ones are: {[0-9], +, -, *, /, (, ), =, \n }")
+                "Contains invalid character! The possible ones are: {[0-9], +, -, *, /, (, ), = }")
 
 
 class Parser():
@@ -246,8 +245,10 @@ class Parser():
                 Parser().tokenizer.selectNext()
                 expression = Parser().parseExpression()
                 statement = Assign(identifier, expression)
+                if (Parser().tokenizer.next.type == "END_PARENTHESES"):
+                    raise SyntaxError("Check if everything is correct!")
             else:
-                raise SyntaxError("Must have an equal after a variable x")
+                raise SyntaxError("Check if everything is correct!")
         
         elif (Parser().tokenizer.next.type == "PRINTLN"):
             Parser().tokenizer.selectNext()
@@ -255,13 +256,12 @@ class Parser():
                 Parser().tokenizer.selectNext()
                 statement = Print(Parser.parseExpression())
                 
-                if (Parser().tokenizer.next.type == "END_PARENTHESES"):
-                    Parser().tokenizer.selectNext()
+                if (Parser().tokenizer.next.type != "END_PARENTHESES"):
+                    raise SyntaxError("Must have a () after a print")
+                
+                Parser().tokenizer.selectNext()
             else:
                 raise SyntaxError("Must have a () after a print")
-
-        elif (Parser().tokenizer.next.type != "ENTER"):
-            raise ValueError("Must be an enter")
 
         Parser().tokenizer.selectNext()
         return statement
@@ -271,7 +271,6 @@ class Parser():
         while (Parser().tokenizer.next.type != "EOF"):
             statement = Parser().parse_statement()
             Block().append_statement(statement)
-
         Parser().tokenizer.selectNext()
         return Block()
 
@@ -311,10 +310,12 @@ class Parser():
     @staticmethod
     def parseFactor():
         node = Parser().tokenizer.next.value
-
         if (Parser().tokenizer.next.type == "INT"):
             node = IntVal(node)
             Parser().tokenizer.selectNext()
+            if (Parser().tokenizer.next.type == "INT"):
+                raise SyntaxError("Something is wrong!")
+
             return node
         
         elif (Parser().tokenizer.next.type == "IDENTIFIER"):
@@ -333,7 +334,7 @@ class Parser():
             nodeFactor = Parser().parseFactor()
             node = UnOp("-", [nodeFactor])
             return node
-
+        
         elif (Parser().tokenizer.next.type == "START_PARENTHESES"):
             Parser().tokenizer.selectNext()
             node = Parser().parseExpression()
@@ -344,6 +345,9 @@ class Parser():
             Parser().tokenizer.selectNext()
 
             return node
+
+        elif (Parser().tokenizer.next.type == "END_PARENTHESES"):
+            raise SyntaxError("It must have an start parentheses!")
 
         else:
             raise SyntaxError("Something is wrong!")
