@@ -262,6 +262,9 @@ class Parser():
                 Parser().tokenizer.selectNext()
             else:
                 raise SyntaxError("Must have a () after a print")
+            
+        elif (Parser().tokenizer.next.type == "ASSIGN"):
+            raise SyntaxError("To have an equal, must be an identifier before!")
 
         Parser().tokenizer.selectNext()
         return statement
