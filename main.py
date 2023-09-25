@@ -14,15 +14,19 @@ class PrePro():
         pass
 
     def filter(self, string: str):
-        if "//" in string:
-            for i in range(0, len(string)):
-                if string[i] == "/":
-                    if (string[i+1] == "/"):
-                        index = i
-                        break
-            return string[0:index]
-        else:
-            return string
+        new_lines = []
+        for line in string.split('\n'):    
+            if "//" in line:
+                for i in range(0, len(line)):
+                    if line[i] == "/":
+                        if (line[i+1] == "/"):
+                            index = i
+                            break
+                new_lines.append(line[0:index])
+            else:
+                new_lines.append(line)
+        cleanString = '\n'.join(new_lines)
+        return cleanString
 
 class SymbolTable:
     def __init__(self):
@@ -135,7 +139,7 @@ class Tokenizer:
 
     def selectNext(self):
         self.position = self.position + 1
-
+        # print(self.token_type)
         while (True):            
             if (self.position == (len(self.source))):
                 self.position = self.position - 1
@@ -215,9 +219,9 @@ class Tokenizer:
                     break
 
             self.position = self.position - 1
-            if (identifier == "println"):
+            if (identifier == "println" or identifier == "Println"):
                 self.token_type = "PRINTLN"
-                self.next = Token(type=self.token_type, value="println")
+                self.next = Token(type=self.token_type, value="Println")
             else:
                 self.token_type = "IDENTIFIER"
                 self.next = Token(type=self.token_type, value=identifier)
