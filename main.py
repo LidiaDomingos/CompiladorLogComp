@@ -15,17 +15,23 @@ class PrePro():
 
     def filter(self, string: str):
         new_lines = []
-        for line in string.split('\n'):    
+        for line in string.split('\n'):
+            line = line.strip()    
             if "//" in line:
                 for i in range(0, len(line)):
                     if line[i] == "/":
                         if (line[i+1] == "/"):
                             index = i
                             break
-                new_lines.append(line[0:index])
+                if (len(line[0:index]) != 0):
+                    new_lines.append(line[0:index])
+                    
             else:
-                new_lines.append(line)
+                if (len(line) != 0):
+                    new_lines.append(line)
         cleanString = '\n'.join(new_lines)
+        cleanString = cleanString + '\n'
+        
         return cleanString
 
 class SymbolTable:
@@ -45,6 +51,9 @@ class Node():
         self.variant = variant
         self.children = children
 
+    def __str__(self):
+        return f"<Node ({self.variant})>"
+    
     def Evaluate(self, symbolTable):
         pass
 
@@ -66,6 +75,21 @@ class BinOp(Node):
 
         elif (self.variant == "*"):
             result = nodeL.Evaluate(symbolTable) * nodeR.Evaluate(symbolTable)
+        
+        elif (self.variant == "=="):
+            result = nodeL.Evaluate(symbolTable) == nodeR.Evaluate(symbolTable)
+        
+        elif (self.variant == ">"):
+            result = nodeL.Evaluate(symbolTable) > nodeR.Evaluate(symbolTable)
+        
+        elif (self.variant == "<"):
+            result = nodeL.Evaluate(symbolTable) < nodeR.Evaluate(symbolTable)
+        
+        elif (self.variant == "&&"):
+            result = nodeL.Evaluate(symbolTable) and nodeR.Evaluate(symbolTable)
+        
+        elif (self.variant == "||"):
+            result = nodeL.Evaluate(symbolTable) or nodeR.Evaluate(symbolTable)
 
         return result
 
@@ -77,6 +101,9 @@ class UnOp(Node):
         
         if (self.variant == "+"):
             return result.Evaluate(symbolTable)
+        
+        elif (self.variant == "!"):
+            return not result.Evaluate(symbolTable)
 
         elif (self.variant == "-"):
             return (-1)*result.Evaluate(symbolTable)
@@ -88,7 +115,6 @@ class IntVal(Node):
 
     def Evaluate(self, symbolTable):
         return self.variant
-
 
 class NoOp(Node):
     def __init__(self):
@@ -113,6 +139,17 @@ class Block(Node):
         for node in self.children:
             node.Evaluate(symbolTable)
 
+class Program(Node):
+    def __init__(self, programs: List[Node] = []):
+        super().__init__(None, programs)
+
+    def appendProgram(self, program: Node):
+        self.children.append(program)
+
+    def Evaluate(self, symbolTable):
+        for node in self.children:
+            node.Evaluate(symbolTable)
+
 class Identifier(Node):
     def __init__(self, key: str):
         super().__init__(key, [])
@@ -127,6 +164,39 @@ class Print(Node):
     def Evaluate(self, symbolTable):
         node = self.children[0]
         print(node.Evaluate(symbolTable))
+
+class Scanln(Node):
+    def __init__(self, variant):
+        super().__init__(None, variant)
+
+    def Evaluate(self, symbolTable):
+        number = int(input())
+        return number
+
+class If(Node):
+
+    def Evaluate(self, symbolTable):
+        expression = self.children[0]
+        if_block = self.children[1]
+        
+        if (expression.Evaluate(symbolTable)):
+            if_block.Evaluate(symbolTable)
+        elif(len(self.children) > 2):
+            if (not expression.Evaluate(symbolTable)):
+                self.children[2].Evaluate(symbolTable)
+        
+class For(Node):
+
+    def Evaluate(self, symbolTable):
+        init = self.children[0].Evaluate(symbolTable)
+        condition = self.children[1]
+        increment = self.children[2]
+        block = self.children[3]
+
+        while(condition.Evaluate(symbolTable)):
+            block.Evaluate(symbolTable)
+            increment.Evaluate(symbolTable)
+
 
 class Tokenizer:
 
@@ -144,7 +214,7 @@ class Tokenizer:
                 self.position = self.position - 1
                 self.isTheLast = True
                 break
-            elif (self.source[self.position] == " "):
+            elif (self.source[self.position] == " " ):
                 self.position = self.position + 1
             else:
                 break
@@ -183,6 +253,16 @@ class Tokenizer:
             self.token_type = "END_PARENTHESES"
             self.next = Token(type=self.token_type,
                               value=self.source[self.position])
+            
+        elif (self.source[self.position] == "{"):
+            self.token_type = "START_CURLY_BRACKET"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
+        
+        elif (self.source[self.position] == "}"):
+            self.token_type = "END_CURLY_BRACKET"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
         
         elif (self.source[self.position] == "\n"):
             self.token_type = "ENTER"
@@ -190,9 +270,90 @@ class Tokenizer:
                               value=self.source[self.position])
             
         elif (self.source[self.position] == "="):
-            self.token_type = "ASSIGN"
+            self.position = self.position + 1
+
+            if (self.source[self.position] == "="):
+                self.token_type = "EQUAL"
+                self.next = Token(type=self.token_type,
+                                value="==")
+            else:
+                self.token_type = "ASSIGN"
+                self.position = self.position - 1
+                self.next = Token(type=self.token_type,
+                                value=self.source[self.position])
+                    
+        elif (self.source[self.position] == ">"):
+            self.token_type = "GREATER_THAN"
             self.next = Token(type=self.token_type,
                               value=self.source[self.position])
+        
+        elif (self.source[self.position] == "<"):
+            self.token_type = "LESS_THAN"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
+            
+        elif (self.source[self.position] == ";"):
+            self.token_type = "SEMICOLON"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
+        
+        elif (self.source[self.position] == "&"):
+            self.position = self.position + 1
+            if (self.source[self.position] == "&"):
+                self.token_type = "AND"
+                self.next = Token(type=self.token_type,
+                              value="&&")
+            
+        elif (self.source[self.position] == "|"):
+            self.position = self.position + 1
+            if (self.source[self.position] == "|"):
+                self.token_type = "OR"
+                self.next = Token(type=self.token_type,
+                                value="||")
+            
+        elif (self.source[self.position] == "!"):
+            self.token_type = "NOT"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
+            
+        elif (self.source[self.position] == "i"):
+            self.position = self.position + 1
+            if (self.source[self.position] == "f"):
+                self.token_type = "IF"
+                self.next = Token(type=self.token_type,
+                                value = "IF")
+            else:
+                self.position = self.position - 1
+
+        elif (self.source[self.position] == "f"):
+            self.position = self.position + 1
+            if (self.source[self.position] == "o"):
+                self.position = self.position + 1
+                if (self.source[self.position] == "r"):
+                    self.token_type = "FOR"
+                    self.next = Token(type=self.token_type,
+                                    value = "FOR")
+                else:
+                    self.position = self.position - 1
+            else:
+                self.position = self.position - 1
+        
+        elif (self.source[self.position] == "e"):
+            self.position = self.position + 1
+            if (self.source[self.position] == "l"):
+                self.position = self.position + 1
+                if (self.source[self.position] == "s"):
+                    self.position = self.position + 1
+                    if (self.source[self.position] == "e"):
+                        self.token_type = "ELSE"
+                        self.next = Token(type=self.token_type,
+                                    value = "ELSE")
+                    else:
+                        self.position = self.position - 1
+                else:
+                    self.position = self.position - 1
+            else:
+                self.position = self.position - 1
 
         elif (self.source[self.position].isdigit()):
             self.token_type = "INT"
@@ -221,13 +382,18 @@ class Tokenizer:
             if (identifier == "Println"):
                 self.token_type = "PRINTLN"
                 self.next = Token(type=self.token_type, value="Println")
+
+            elif (identifier == "Scanln"):
+                self.token_type = "SCANLN"
+                self.next = Token(type=self.token_type, value="Scanln")
+                
             else:
                 self.token_type = "IDENTIFIER"
                 self.next = Token(type=self.token_type, value=identifier)
         
         else:
             raise ValueError(
-                "Contains invalid character! The possible ones are: {[0-9], +, -, *, /, (, ), = }")
+                "Contains invalid character! The possible ones are: {[0-9], +, -, *, /, (, ), =, &&, ||, ==, {, }, ! }")
 
 
 class Parser():
@@ -235,48 +401,141 @@ class Parser():
     tokenizer: Tokenizer
 
     @staticmethod
-    def parse_statement():
-        statement = NoOp()
+    def parseRLExpression():
+        node = Parser().parseExpression()
+        while (Parser().tokenizer.next.type == "EQUAL" or Parser().tokenizer.next.type == "GREATER_THAN" or Parser().tokenizer.next.type == "LESS_THAN"):
+
+            if (Parser().tokenizer.next.type == "EQUAL"):
+                Parser().tokenizer.selectNext()
+                node2 = Parser().parseExpression()
+                node = BinOp("==", [node, node2])
+
+            if (Parser().tokenizer.next.type == "GREATER_THAN"):
+                Parser().tokenizer.selectNext()
+                node2 = Parser().parseExpression()
+                node = BinOp(">", [node, node2])
+
+            elif (Parser().tokenizer.next.type == "LESS_THAN"):
+                Parser().tokenizer.selectNext()
+                node2 = Parser().parseExpression()
+                node = BinOp("<", [node, node2])
+
+        return node
+    
+    @staticmethod
+    def parseBoolTerm():
+        node = Parser().parseRLExpression()
+        while (Parser().tokenizer.next.type == "AND"):
+
+            if (Parser().tokenizer.next.type == "AND"):
+                Parser().tokenizer.selectNext()
+                node2 = Parser().parseRLExpression()
+                node = BinOp("&&", [node, node2])
+        return node
+    
+    @staticmethod
+    def parseBoolExpression():
+        node = Parser().parseBoolTerm()
+        while (Parser().tokenizer.next.type == "OR"):
+
+            if (Parser().tokenizer.next.type == "OR"):
+                Parser().tokenizer.selectNext()
+                node2 = Parser().parseBoolTerm()
+                node = BinOp("||", [node, node2])
+
+        return node
+    
+    @staticmethod
+    def parseAssign():
+
+        identifier = Identifier(Parser().tokenizer.next.value)
+        Parser().tokenizer.selectNext()
+        if (Parser().tokenizer.next.type == "ASSIGN"):
+            Parser().tokenizer.selectNext()
+            expression = Parser().parseBoolExpression()
+            statement = Assign(identifier, expression)
+            
+            if (Parser().tokenizer.next.type == "END_PARENTHESES"):
+                raise SyntaxError("It needs a start parentheses before!")
+        else:
+            raise SyntaxError("Check if everything is correct!")
+        return statement
+    
+    @staticmethod
+    def parseStatement():
+        if (Parser().tokenizer.next.type == "ENTER"):
+            node = NoOp()
+            Parser().tokenizer.selectNext()
+            return node
 
         if (Parser().tokenizer.next.type == "IDENTIFIER"):
-            identifier = Identifier(Parser().tokenizer.next.value)
-            Parser().tokenizer.selectNext()
-            if (Parser().tokenizer.next.type == "ASSIGN"):
-                Parser().tokenizer.selectNext()
-                expression = Parser().parseExpression()
-                statement = Assign(identifier, expression)
-                if (Parser().tokenizer.next.type == "END_PARENTHESES"):
-                    raise SyntaxError("Check if everything is correct!")
-            else:
-                raise SyntaxError("Check if everything is correct!")
+            return Parser().parseAssign()
         
         elif (Parser().tokenizer.next.type == "PRINTLN"):
             Parser().tokenizer.selectNext()
             if (Parser().tokenizer.next.type == "START_PARENTHESES"):
                 Parser().tokenizer.selectNext()
-                statement = Print(Parser.parseExpression())
-                
+                node = Print(Parser.parseBoolExpression())
                 if (Parser().tokenizer.next.type != "END_PARENTHESES"):
                     raise SyntaxError("Must have a () after a print")
-                
                 Parser().tokenizer.selectNext()
+                return node
             else:
                 raise SyntaxError("Must have a () after a print")
             
+        elif (Parser().tokenizer.next.type == "IF"):
+            Parser().tokenizer.selectNext()
+
+            expression = Parser().parseBoolExpression()
+            if_block = Parser().parseBlock()
+            node = If("IF", [expression, if_block])
+
+            if (Parser().tokenizer.next.type == "ELSE"):
+                Parser().tokenizer.selectNext()
+                else_block = Parser().parseBlock()
+                node = If("IF", [expression, if_block, else_block])
+            return node
+
+            
+        elif (Parser().tokenizer.next.type == "FOR"):
+            Parser().tokenizer.selectNext()
+            init = Parser().parseAssign()
+            if (Parser().tokenizer.next.type == "SEMICOLON"):
+                Parser().tokenizer.selectNext()
+                condition = Parser().parseBoolExpression()
+                if (Parser().tokenizer.next.type == "SEMICOLON"):
+                    Parser().tokenizer.selectNext()
+                    increment = Parser().parseAssign()
+                    block = Parser().parseBlock()
+
+                    node = For("FOR", [init, condition, increment, block])
+                    return node
+
+                else:
+                    raise SyntaxError("The syntax to for is: int a = 0; a < n; a++")
+            else:
+                raise SyntaxError("The syntax to for is: int a = 0; a < n; a++")
+
         elif (Parser().tokenizer.next.type == "ASSIGN"):
             raise SyntaxError("To have an equal, must be an identifier before!")
 
-        Parser().tokenizer.selectNext()
-        return statement
 
     @staticmethod
-    def parse_block():
-        while (Parser().tokenizer.next.type != "EOF"):
-            statement = Parser().parse_statement()
-            Block().append_statement(statement)
-        Parser().tokenizer.selectNext()
-        return Block()
+    def parseBlock():
+        node = Block()
+        if (Parser().tokenizer.next.type == "START_CURLY_BRACKET"):
+            Parser().tokenizer.selectNext()
+            if (Parser().tokenizer.next.type == "ENTER"):
+                Parser().tokenizer.selectNext()
+                while (Parser().tokenizer.next.type != "END_CURLY_BRACKET"):
+                    statement = Parser().parseStatement()
+                    node.append_statement(statement)
 
+                Parser().tokenizer.selectNext()
+                return node
+            else:
+                raise SyntaxError("Must have an end curly bracket (})!")
+                
     @staticmethod
     def parseTerm():
         node = Parser().parseFactor()
@@ -338,9 +597,15 @@ class Parser():
             node = UnOp("-", [nodeFactor])
             return node
         
+        elif (Parser().tokenizer.next.type == "NOT"):
+            Parser().tokenizer.selectNext()
+            nodeFactor = Parser().parseFactor()
+            node = UnOp("!", [nodeFactor])
+            return node
+        
         elif (Parser().tokenizer.next.type == "START_PARENTHESES"):
             Parser().tokenizer.selectNext()
-            node = Parser().parseExpression()
+            node = Parser().parseBoolExpression()
 
             if (Parser().tokenizer.next.type != "END_PARENTHESES"):
                 raise SyntaxError("It must have an end parentheses!")
@@ -348,6 +613,20 @@ class Parser():
             Parser().tokenizer.selectNext()
 
             return node
+        
+        elif (Parser().tokenizer.next.type == "SCANLN"):
+            Parser().tokenizer.selectNext()
+            if (Parser().tokenizer.next.type == "START_PARENTHESES"):
+                node = Scanln("SCANLN")
+                Parser().tokenizer.selectNext()
+
+                if (Parser().tokenizer.next.type != "END_PARENTHESES"):
+                    raise SyntaxError("It must have an end parentheses!")
+
+                Parser().tokenizer.selectNext()
+
+                return node
+
 
         elif (Parser().tokenizer.next.type == "END_PARENTHESES"):
             raise SyntaxError("It must have an start parentheses!")
@@ -355,13 +634,27 @@ class Parser():
         else:
             raise SyntaxError("Something is wrong!")
 
+    @staticmethod
+    def program():
+        node = Program()
+        while(Parser().tokenizer.next.type != "EOF"):
+            state = Parser().parseStatement()
+            if (Parser().tokenizer.next.type == "ENTER"):
+                Parser().tokenizer.selectNext()
+            else:
+                raise SyntaxError("There is something wrong")
+            node.appendProgram(state)
+        Parser().tokenizer.selectNext()
+        return node
+    
     @classmethod
     def run(cls, source: str):
         str = PrePro().filter(source)
         symbolTable = SymbolTable()
         cls.tokenizer = Tokenizer(str)
         cls.tokenizer.selectNext()
-        result = cls.parse_block()
+        result = Parser().program()
+
         if (Parser().tokenizer.next.type == "EOF"):
             return result.Evaluate(symbolTable)
         else:
