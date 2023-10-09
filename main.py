@@ -178,7 +178,6 @@ class If(Node):
     def Evaluate(self, symbolTable):
         expression = self.children[0]
         if_block = self.children[1]
-        
         if (expression.Evaluate(symbolTable)):
             if_block.Evaluate(symbolTable)
         elif(len(self.children) > 2):
@@ -316,45 +315,6 @@ class Tokenizer:
             self.next = Token(type=self.token_type,
                               value=self.source[self.position])
             
-        elif (self.source[self.position] == "i"):
-            self.position = self.position + 1
-            if (self.source[self.position] == "f"):
-                self.token_type = "IF"
-                self.next = Token(type=self.token_type,
-                                value = "IF")
-            else:
-                self.position = self.position - 1
-
-        elif (self.source[self.position] == "f"):
-            self.position = self.position + 1
-            if (self.source[self.position] == "o"):
-                self.position = self.position + 1
-                if (self.source[self.position] == "r"):
-                    self.token_type = "FOR"
-                    self.next = Token(type=self.token_type,
-                                    value = "FOR")
-                else:
-                    self.position = self.position - 1
-            else:
-                self.position = self.position - 1
-        
-        elif (self.source[self.position] == "e"):
-            self.position = self.position + 1
-            if (self.source[self.position] == "l"):
-                self.position = self.position + 1
-                if (self.source[self.position] == "s"):
-                    self.position = self.position + 1
-                    if (self.source[self.position] == "e"):
-                        self.token_type = "ELSE"
-                        self.next = Token(type=self.token_type,
-                                    value = "ELSE")
-                    else:
-                        self.position = self.position - 1
-                else:
-                    self.position = self.position - 1
-            else:
-                self.position = self.position - 1
-
         elif (self.source[self.position].isdigit()):
             self.token_type = "INT"
             number = ""
@@ -386,6 +346,18 @@ class Tokenizer:
             elif (identifier == "Scanln"):
                 self.token_type = "SCANLN"
                 self.next = Token(type=self.token_type, value="Scanln")
+
+            elif (identifier == "if"):
+                self.token_type = "IF"
+                self.next = Token(type=self.token_type, value="if")
+            
+            elif (identifier == "else"):
+                self.token_type = "ELSE"
+                self.next = Token(type=self.token_type, value="else")
+
+            elif (identifier == "for"):
+                self.token_type = "FOR"
+                self.next = Token(type=self.token_type, value="for")
                 
             else:
                 self.token_type = "IDENTIFIER"
@@ -463,6 +435,7 @@ class Parser():
     
     @staticmethod
     def parseStatement():
+
         if (Parser().tokenizer.next.type == "ENTER"):
             node = NoOp()
             Parser().tokenizer.selectNext()
@@ -488,12 +461,15 @@ class Parser():
 
             expression = Parser().parseBoolExpression()
             if_block = Parser().parseBlock()
-            node = If("IF", [expression, if_block])
 
             if (Parser().tokenizer.next.type == "ELSE"):
                 Parser().tokenizer.selectNext()
                 else_block = Parser().parseBlock()
                 node = If("IF", [expression, if_block, else_block])
+
+            else:
+                node = If("IF", [expression, if_block])
+
             return node
 
             
@@ -527,12 +503,13 @@ class Parser():
             Parser().tokenizer.selectNext()
             if (Parser().tokenizer.next.type == "ENTER"):
                 Parser().tokenizer.selectNext()
-                while (Parser().tokenizer.next.type != "END_CURLY_BRACKET"):
-                    statement = Parser().parseStatement()
-                    node.append_statement(statement)
-
+                statement = Parser().parseStatement()
+                node.append_statement(statement)
                 Parser().tokenizer.selectNext()
-                return node
+
+            if (Parser().tokenizer.next.type == "END_CURLY_BRACKET"):
+                Parser().tokenizer.selectNext()
+                return statement
             else:
                 raise SyntaxError("Must have an end curly bracket (})!")
                 
