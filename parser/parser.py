@@ -60,6 +60,7 @@ class Parser():
         Parser().tokenizer.selectNext()
         if (Parser().tokenizer.next.type == "ASSIGN"):
             Parser().tokenizer.selectNext()
+            
             expression = Parser().parseBoolExpression()
             statement = Assign(identifier, expression)
             

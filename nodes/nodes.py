@@ -119,6 +119,8 @@ class Assign(Node):
 
     def Evaluate(self, symbolTable):
         [key, value] = self.children
+        if (key.Evaluate(symbolTable)[1] == "string" and value.Evaluate(symbolTable)[1] == "int"):
+            raise TypeError("Cannot assign an int to a string variable!")
         symbolTable.set(key.variant, value.Evaluate(symbolTable)[0])
         
 class Block(Node):
