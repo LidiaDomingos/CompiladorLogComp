@@ -20,8 +20,9 @@ class BinOp(Node):
 
 
         if (nodeL.Evaluate(symbolTable)[1] == nodeR.Evaluate(symbolTable)[1]):
+                
             if (self.variant == "."):
-                result = nodeL.Evaluate(symbolTable)[0] + nodeR.Evaluate(symbolTable)[0]
+                result = str(nodeL.Evaluate(symbolTable)[0]) + str(nodeR.Evaluate(symbolTable)[0])
                 return (str(result), "string")
             
             if (self.variant == "+"):
