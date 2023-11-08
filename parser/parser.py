@@ -55,14 +55,14 @@ class Parser():
     
     @staticmethod
     def parseAssign():
-
+        key = Parser().tokenizer.next.value
         identifier = Identifier(Parser().tokenizer.next.value)
         Parser().tokenizer.selectNext()
         if (Parser().tokenizer.next.type == "ASSIGN"):
             Parser().tokenizer.selectNext()
             
             expression = Parser().parseBoolExpression()
-            statement = Assign(identifier, expression)
+            statement = Assign(key, [identifier, expression])
             
             if (Parser().tokenizer.next.type == "END_PARENTHESES"):
                 raise SyntaxError("It needs a start parentheses before!")
@@ -92,13 +92,13 @@ class Parser():
                 Parser().tokenizer.selectNext()
                 if (Parser().tokenizer.next.type == "TYPE"):
                     type = Parser().tokenizer.next.value
-                    node = VarDec(type, [identifier])
                     Parser().tokenizer.selectNext()
                     if (Parser().tokenizer.next.type == "ASSIGN"):
                         Parser().tokenizer.selectNext()
                         result = Parser().parseBoolExpression()
                         node = VarDec(type, [identifier, result])
-                        
+                    else:
+                        node = VarDec(type, [identifier])
                     return node
                 else:
                     raise TypeError("It must have a type in a variable!")
@@ -109,7 +109,7 @@ class Parser():
             Parser().tokenizer.selectNext()
             if (Parser().tokenizer.next.type == "START_PARENTHESES"):
                 Parser().tokenizer.selectNext()
-                node = Print(Parser().parseBoolExpression())
+                node = Print([Parser().parseBoolExpression()])
                 if (Parser().tokenizer.next.type != "END_PARENTHESES"):
                     raise SyntaxError("Must have a () after a print")
                 Parser().tokenizer.selectNext()
@@ -123,12 +123,10 @@ class Parser():
             expression = Parser().parseBoolExpression()
 
             if_block = Parser().parseBlock()
-
             if (Parser().tokenizer.next.type == "ELSE"):
                 Parser().tokenizer.selectNext()
                 else_block = Parser().parseBlock()
                 node = If("IF", [expression, if_block, else_block])
-
             else:
                 node = If("IF", [expression, if_block])
             return node
@@ -137,6 +135,7 @@ class Parser():
         elif (Parser().tokenizer.next.type == "FOR"):
             Parser().tokenizer.selectNext()
             init = Parser().parseAssign()
+
             if (Parser().tokenizer.next.type == "SEMICOLON"):
                 Parser().tokenizer.selectNext()
                 condition = Parser().parseBoolExpression()
@@ -144,7 +143,6 @@ class Parser():
                     Parser().tokenizer.selectNext()
                     increment = Parser().parseAssign()
                     block = Parser().parseBlock()
-
                     node = For("FOR", [init, condition, increment, block])
                     return node
 
@@ -164,13 +162,11 @@ class Parser():
             Parser().tokenizer.selectNext()
             if (Parser().tokenizer.next.type == "ENTER"):
                 Parser().tokenizer.selectNext()
-                statement = Parser().parseStatement()
-                node.append_statement(statement)
+                while(Parser().tokenizer.next.type !="END_CURLY_BRACKET"):
+                    statement = Parser().parseStatement()
+                    node.append_statement(statement)
                 Parser().tokenizer.selectNext()
-
-            if (Parser().tokenizer.next.type == "END_CURLY_BRACKET"):
-                Parser().tokenizer.selectNext()
-                return statement
+                return node
             else:
                 raise SyntaxError("Must have an end curly bracket (})!")
 
@@ -214,7 +210,7 @@ class Parser():
         return node
 
     @staticmethod
-    def parseFactor():        
+    def parseFactor():    
         if (Parser().tokenizer.next.type == "INT"):
             node = IntVal(Parser().tokenizer.next.value)
             Parser().tokenizer.selectNext()
@@ -299,7 +295,7 @@ class Parser():
         result = Parser().program()
 
         if (Parser().tokenizer.next.type == "EOF"):
-            return result.Evaluate(symbolTable)
+            return result
         else:
             raise SyntaxError(
                 "Check if everything is correct! Did not arrive in EOF type")
