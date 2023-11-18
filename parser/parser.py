@@ -181,8 +181,11 @@ class Parser():
                     statement = Parser().parseStatement()
                     lista.append(statement)
                 node = Block(None, lista)
-                Parser().tokenizer.selectNext()
-                return node
+                if (Parser().tokenizer.next.type =="END_CURLY_BRACKET"):
+                    Parser().tokenizer.selectNext()
+                    return node
+                else:
+                    raise SyntaxError("Must have an end curly bracket (})!")
             else:
                 raise SyntaxError("Must have an end curly bracket (})!")
 
@@ -365,6 +368,8 @@ class Parser():
                             nodeFuncDec = FuncDec("FUNCDEC", aux_lista)
 
                             return nodeFuncDec
+        else:
+            raise Exception("Must have a function!")
                         
     @staticmethod
     def program():
