@@ -256,13 +256,11 @@ class FuncCall(Node):
             nodes[i].Evaluate(localSymboltable)
             identifier = nodes[i].children[0]
             returnValue, returnType = self.children[i].Evaluate(symbolTable)
-            print(returnValue, "RETURNVALUE")
             localSymboltable.set(identifier.variant, returnValue)
 
         resultNode, returnType = block.Evaluate(localSymboltable)
         if (returnType != None and returnType != typeNode):
             raise TypeError("Must return the same type defined by the function")
-        print(returnType, type(resultNode), "resultadooooooo")
         return resultNode, returnType
 
 class Return(Node):
