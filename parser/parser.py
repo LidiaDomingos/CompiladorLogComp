@@ -1,4 +1,4 @@
-from nodes.nodes import UnOp, Assign, BinOp, Block, For, Identifier, If, IntVal, NoOp, Print, Program, Scanln, StrVal, VarDec
+from nodes.nodes import FuncCall, FuncDec, Return, UnOp, Assign, BinOp, Block, For, Identifier, If, IntVal, NoOp, Print, Program, Scanln, StrVal, VarDec
 from prepro.prepro import PrePro
 from symboltable.symboltable import SymbolTable
 from tokenizer.tokenizer import Tokenizer
@@ -55,51 +55,63 @@ class Parser():
     
     @staticmethod
     def parseAssign():
-
+        key = Parser().tokenizer.next.value
         identifier = Identifier(Parser().tokenizer.next.value)
         Parser().tokenizer.selectNext()
         if (Parser().tokenizer.next.type == "ASSIGN"):
             Parser().tokenizer.selectNext()
             
             expression = Parser().parseBoolExpression()
-            statement = Assign(identifier, expression)
+            statement = Assign(key, [identifier, expression])
+
+            return statement
+
+        elif (Parser().tokenizer.next.type == "START_PARENTHESES"):
+            Parser().tokenizer.selectNext()
+            lista = []
             
+            while (Parser().tokenizer.next.type != "END_PARENTHESES"):
+                result = Parser().parseBoolExpression()
+                lista.append(result)
+                
+                if (Parser().tokenizer.next.type == "COMMA"):
+                    Parser().tokenizer.selectNext()
+                else:
+                    break
+
             if (Parser().tokenizer.next.type == "END_PARENTHESES"):
-                raise SyntaxError("It needs a start parentheses before!")
+                Parser().tokenizer.selectNext()
+            else:
+                raise SyntaxError("It needs a end parentheses!")
+            funcCallNode = FuncCall(identifier.variant, lista)
+            return funcCallNode
         else:
             raise SyntaxError("Check if everything is correct!")
-       
-        return statement
     
     @staticmethod
     def parseStatement():
 
-        node = NoOp()
-
         if (Parser().tokenizer.next.type == "ENTER"):
             node = NoOp()
             Parser().tokenizer.selectNext()
-            return node
 
-        if (Parser().tokenizer.next.type == "IDENTIFIER"):
+        elif (Parser().tokenizer.next.type == "IDENTIFIER"):
             node = Parser().parseAssign()
-            return node
         
-        if (Parser().tokenizer.next.type == "VAR"):
+        elif (Parser().tokenizer.next.type == "VAR"):
             Parser().tokenizer.selectNext()
             if (Parser().tokenizer.next.type == "IDENTIFIER"):
                 identifier = Identifier(Parser().tokenizer.next.value)
                 Parser().tokenizer.selectNext()
                 if (Parser().tokenizer.next.type == "TYPE"):
                     type = Parser().tokenizer.next.value
-                    node = VarDec(type, [identifier])
                     Parser().tokenizer.selectNext()
                     if (Parser().tokenizer.next.type == "ASSIGN"):
                         Parser().tokenizer.selectNext()
                         result = Parser().parseBoolExpression()
                         node = VarDec(type, [identifier, result])
-                        
-                    return node
+                    else:
+                        node = VarDec(type, [identifier])
                 else:
                     raise TypeError("It must have a type in a variable!")
             else:
@@ -109,11 +121,10 @@ class Parser():
             Parser().tokenizer.selectNext()
             if (Parser().tokenizer.next.type == "START_PARENTHESES"):
                 Parser().tokenizer.selectNext()
-                node = Print(Parser().parseBoolExpression())
+                node = Print([Parser().parseBoolExpression()])
                 if (Parser().tokenizer.next.type != "END_PARENTHESES"):
                     raise SyntaxError("Must have a () after a print")
                 Parser().tokenizer.selectNext()
-                return node
             else:
                 raise SyntaxError("Must have a () after a print")
             
@@ -123,20 +134,17 @@ class Parser():
             expression = Parser().parseBoolExpression()
 
             if_block = Parser().parseBlock()
-
             if (Parser().tokenizer.next.type == "ELSE"):
                 Parser().tokenizer.selectNext()
                 else_block = Parser().parseBlock()
                 node = If("IF", [expression, if_block, else_block])
-
             else:
                 node = If("IF", [expression, if_block])
-            return node
-
             
         elif (Parser().tokenizer.next.type == "FOR"):
             Parser().tokenizer.selectNext()
             init = Parser().parseAssign()
+
             if (Parser().tokenizer.next.type == "SEMICOLON"):
                 Parser().tokenizer.selectNext()
                 condition = Parser().parseBoolExpression()
@@ -144,33 +152,37 @@ class Parser():
                     Parser().tokenizer.selectNext()
                     increment = Parser().parseAssign()
                     block = Parser().parseBlock()
-
                     node = For("FOR", [init, condition, increment, block])
-                    return node
 
                 else:
                     raise SyntaxError("The syntax to for is: int a = 0; a < n; a++")
             else:
                 raise SyntaxError("The syntax to for is: int a = 0; a < n; a++")
 
-        elif (Parser().tokenizer.next.type == "ASSIGN"):
-            raise SyntaxError("To have an equal, must be an identifier before!")
+        elif (Parser().tokenizer.next.type == "return"):
+            Parser().tokenizer.selectNext()
+            result = Parser().parseBoolExpression()
+            node = Return("return", [result])
+
+        else:
+            raise SyntaxError("Something is wrong!")
+        
+        return node
 
 
     @staticmethod
     def parseBlock():
-        node = Block()
+        lista = []
         if (Parser().tokenizer.next.type == "START_CURLY_BRACKET"):
             Parser().tokenizer.selectNext()
             if (Parser().tokenizer.next.type == "ENTER"):
                 Parser().tokenizer.selectNext()
-                statement = Parser().parseStatement()
-                node.append_statement(statement)
+                while(Parser().tokenizer.next.type !="END_CURLY_BRACKET"):
+                    statement = Parser().parseStatement()
+                    lista.append(statement)
+                node = Block(None, lista)
                 Parser().tokenizer.selectNext()
-
-            if (Parser().tokenizer.next.type == "END_CURLY_BRACKET"):
-                Parser().tokenizer.selectNext()
-                return statement
+                return node
             else:
                 raise SyntaxError("Must have an end curly bracket (})!")
 
@@ -214,7 +226,7 @@ class Parser():
         return node
 
     @staticmethod
-    def parseFactor():        
+    def parseFactor():    
         if (Parser().tokenizer.next.type == "INT"):
             node = IntVal(Parser().tokenizer.next.value)
             Parser().tokenizer.selectNext()
@@ -228,6 +240,26 @@ class Parser():
         elif (Parser().tokenizer.next.type == "IDENTIFIER"):
             node = Identifier(Parser().tokenizer.next.value)
             Parser().tokenizer.selectNext()
+
+            if (Parser().tokenizer.next.type == "START_PARENTHESES"):
+                lista = []
+                Parser().tokenizer.selectNext()
+
+                while (Parser().tokenizer.next.type != "END_PARENTHESES"):
+                    result = Parser().parseBoolExpression()
+                    lista.append(result)
+                    
+                    if (Parser().tokenizer.next.type == "COMMA"):
+                        Parser().tokenizer.selectNext()
+                    else:
+                        break
+                
+                if (Parser().tokenizer.next.type == "END_PARENTHESES"):
+                    Parser().tokenizer.selectNext()
+                    node = FuncCall(node.variant, lista)
+                else:
+                    raise TypeError("It needs a close parantheses!")
+                
             return node
 
         elif (Parser().tokenizer.next.type == "MINUS"):
@@ -264,30 +296,85 @@ class Parser():
         
         elif (Parser().tokenizer.next.type == "SCANLN"):
             Parser().tokenizer.selectNext()
+            node = Scanln("SCANLN")
             if (Parser().tokenizer.next.type == "START_PARENTHESES"):
-                node = Scanln("SCANLN")
                 Parser().tokenizer.selectNext()
 
-                if (Parser().tokenizer.next.type != "END_PARENTHESES"):
+                if (Parser().tokenizer.next.type == "END_PARENTHESES"):
+                    Parser().tokenizer.selectNext()
+                    return node
+                else:
                     raise SyntaxError("It must have an end parentheses!")
-
-                Parser().tokenizer.selectNext()
-                return node
-
+            else:
+                raise SyntaxError("Something is wrong!")
         else:
             raise SyntaxError("Something is wrong!")
 
     @staticmethod
+    def declaration():
+        lista = []
+
+        if (Parser().tokenizer.next.type == "func"):
+            Parser().tokenizer.selectNext()
+
+            if (Parser().tokenizer.next.type == "IDENTIFIER"):
+                funcName = Identifier(Parser().tokenizer.next.value)
+                Parser().tokenizer.selectNext()
+
+                if (Parser().tokenizer.next.type == "START_PARENTHESES"):
+                    Parser().tokenizer.selectNext()
+
+                    while (Parser().tokenizer.next.type != "END_PARENTHESES"):
+                        if (Parser().tokenizer.next.type == "IDENTIFIER"):
+                            identifier = Identifier(Parser().tokenizer.next.value)
+                            Parser().tokenizer.selectNext()
+
+                            if (Parser().tokenizer.next.type == "TYPE"):
+                                type = Parser().tokenizer.next.value
+
+                                nodeVar = VarDec(type, [identifier])
+                                lista.append(nodeVar)
+                                Parser().tokenizer.selectNext()
+
+                                if (Parser().tokenizer.next.type == "COMMA"):
+                                    Parser().tokenizer.selectNext()
+                                else:
+                                    break
+                    
+                    if (Parser().tokenizer.next.type == "END_PARENTHESES"):
+                        Parser().tokenizer.selectNext()
+                    else:
+                        raise  SyntaxError("It needs a close parentheses!")
+                    
+                    if (Parser().tokenizer.next.type == "TYPE"):
+                        nodeFunc = VarDec(Parser().tokenizer.next.value, [funcName])
+                        Parser().tokenizer.selectNext()
+                        nodeBlock = Parser().parseBlock()
+
+                        if (Parser().tokenizer.next.type == "ENTER"):
+                            Parser().tokenizer.selectNext()
+
+                            aux_lista = []
+                            aux_lista.append(nodeFunc)
+
+                            for i in lista:
+                                aux_lista.append(i)
+
+                            aux_lista.append(nodeBlock)
+
+                            nodeFuncDec = FuncDec("FUNCDEC", aux_lista)
+
+                            return nodeFuncDec
+                        
+    @staticmethod
     def program():
         node = Program()
-        while(Parser().tokenizer.next.type != "EOF"):
-            state = Parser().parseStatement()
-            if (Parser().tokenizer.next.type == "ENTER"):
-                Parser().tokenizer.selectNext()
-            else:
-                raise SyntaxError("There is something wrong")
-            node.appendProgram(state)
+        while (Parser().tokenizer.next.type != "EOF"):
+            declaration = Parser().declaration()
+            node.appendProgram(declaration)
         Parser().tokenizer.selectNext()
+        main = FuncCall("main", [])
+        node.appendProgram(main)
         return node
     
     @classmethod

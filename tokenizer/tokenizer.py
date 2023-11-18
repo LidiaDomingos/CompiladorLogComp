@@ -127,6 +127,11 @@ class Tokenizer:
             self.next = Token(type=self.token_type,
                               value=self.source[self.position])
         
+        elif (self.source[self.position] == ","):
+            self.token_type = "COMMA"
+            self.next = Token(type=self.token_type,
+                              value=self.source[self.position])
+            
         elif (self.source[self.position] == '"'):
             string = ''
             self.position = self.position + 1
@@ -188,6 +193,14 @@ class Tokenizer:
             elif (identifier == "var"):
                 self.token_type = "VAR"
                 self.next = Token(type=self.token_type, value="var")
+
+            elif (identifier == "return"):
+                self.token_type = "return"
+                self.next = Token(type=self.token_type, value=identifier)
+
+            elif (identifier == "func"):
+                self.token_type = "func"
+                self.next = Token(type=self.token_type, value=identifier)
             
             elif (identifier == "int" or identifier == "string"):
                 self.token_type = "TYPE"
@@ -198,5 +211,5 @@ class Tokenizer:
                 self.next = Token(type=self.token_type, value=identifier)
         else:
             raise ValueError(
-                "Contains invalid character! The possible ones are: {[0-9], +, -, *, /, (, ), =, &&, ||, ==, {, }, ! }")
+                "Contains invalid character!")
 
