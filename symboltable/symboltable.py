@@ -15,4 +15,9 @@ class SymbolTable:
             raise ValueError("Variable already created!")
 
     def set(self, key: str, value:any):
-        self.table[key] = (value, self.table[key][1])
+        if (type(value) == int and self.table[key][1] == "int" ):
+            self.table[key] = (value, self.table[key][1])
+        elif (self.table[key][1] == "string" and type(value) == str):
+            self.table[key] = (value, self.table[key][1])
+        else:
+            raise TypeError("Must be the same type!")

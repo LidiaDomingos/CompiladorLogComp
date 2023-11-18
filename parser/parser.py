@@ -183,7 +183,10 @@ class Parser():
                 node = Block(None, lista)
                 if (Parser().tokenizer.next.type =="END_CURLY_BRACKET"):
                     Parser().tokenizer.selectNext()
-                    return node
+                    if (Parser().tokenizer.next.type == "ELSE" or Parser().tokenizer.next.type == "ENTER"):
+                        return node
+                    else:
+                        raise Exception("Must have an enter after an end curly bracket!")
                 else:
                     raise SyntaxError("Must have an end curly bracket (})!")
             else:
